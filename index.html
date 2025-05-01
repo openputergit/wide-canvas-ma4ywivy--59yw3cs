@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Task Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .task-card:hover {
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+        .modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Project Task Tracker</h1>
+            <button onclick="showProjectModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="bi bi-plus-lg mr-2"></i>New Project
+            </button>
+        </div>
+
+        <!-- Projects Container -->
+        <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Projects will be dynamically added here -->
+        </div>
+
+        <!-- Project Modal -->
+        <div id="projectModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h2 class="text-2xl font-bold mb-4">Create New Project</h2>
+                <input type="text" id="projectName" placeholder="Project Name" class="w-full p-2 border rounded mb-4">
+                <div class="flex justify-end">
+                    <button onclick="closeProjectModal()" class="mr-2 px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button onclick="createProject()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Modal -->
+        <div id="taskModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h2 class="text-2xl font-bold mb-4">Add New Task</h2>
+                <input type="text" id="taskName" placeholder="Task Name" class="w-full p-2 border rounded mb-4">
+                <input type="date" id="plannedDate" class="w-full p-2 border rounded mb-4">
+                <input type="date" id="targetDate" class="w-full p-2 border rounded mb-4">
+                <select id="taskStatus" class="w-full p-2 border rounded mb-4">
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Rework">Rework</option>
+                </select>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Attachments</label>
+                    <input type="file" id="taskAttachment" multiple class="w-full">
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="closeTaskModal()" class="mr-2 px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button onclick="addTask()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Add Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentProjectId = null;
+        let projects = [];
+        
+        // Show Project Modal
+        function showProjectModal() {
+            document.getElementById('projectModal').classList.remove('hidden');
+        }
+
+        // Close Project Modal
+        function closeProjectModal() {
+            document.getElementById('projectModal').classList.add('hidden');
+            document.getElementById('projectName').value = '';
+        }
+
+        // Show Task Modal
+        function showTaskModal(projectId) {
+            currentProjectId = projectId;
+            document.getElementById('taskModal').classList.remove('hidden');
+        }
+
+        // Close Task Modal
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.add('hidden');
+            document.getElementById('taskName').value = '';
+            document.getElementById('plannedDate').value = '';
+            document.getElementById('targetDate').value = '';
+            document.getElementById('taskStatus').value = 'Pending';
+            document.getElementById('taskAttachment').value = '';
+            currentProjectId = null;
+        }
+
+        // Create Project
+        function createProject() {
+            const projectName = document.getElementById('projectName').value;
+            if (projectName.trim()) {
+                const project = {
+                    id: Date.now(),
+                    name: projectName,
+                    tasks: []
+                };
+                projects.push(project);
+                renderProjects();
+                closeProjectModal();
+            }
+        }
+
+        // Add Task
+        function addTask() {
+            const taskName = document.getElementById('taskName').value;
+            const plannedDate = document.getElementById('plannedDate').value;
+            const targetDate = document.getElementById('targetDate').value;
+            const status = document.getElementById('taskStatus').value;
+            const attachments = document.getElementById('taskAttachment').files;
+
+            if (taskName.trim() && currentProjectId) {
+                const project = projects.find(p => p.id === currentProjectId);
+                if (project) {
+                    const task = {
+                        id: Date.now(),
+                        name: taskName,
+                        plannedDate,
+                        targetDate,
+                        status,
+                        attachments: Array.from(attachments).map(file => file.name)
+                    };
+                    project.tasks.push(task);
+                    renderProjects();
+                    closeTaskModal();
+                }
+            }
+        }
+
+        // Update Task Status
+        function updateTaskStatus(projectId, taskId, newStatus) {
+            const project = projects.find(p => p.id === projectId);
+            if (project) {
+                const task = project.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.status = newStatus;
+                    renderProjects();
+                }
+            }
+        }
+
+        // Render Projects
+        function renderProjects() {
+            const container = document.getElementById('projects-container');
+            container.innerHTML = '';
+
+            projects.forEach(project => {
+                const projectElement = document.createElement('div');
+                projectElement.className = 'bg-white rounded-lg shadow-lg p-6';
+                projectElement.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">${project.name}</h3>
+                        <button onclick="showTaskModal(${project.id})" class="text-blue-600 hover:text-blue-800">
+                            <i class="bi bi-plus-circle"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        ${project.tasks.map(task => `
+                            <div class="task-card bg-gray-50 p-4 rounded-lg">
+                                <div class="flex justify-between items-center">
+                                    <h4 class="font-semibold">${task.name}</h4>
+                                    <select onchange="updateTaskStatus(${project.id}, ${task.id}, this.value)" 
+                                            class="text-sm p-1 rounded border">
+                                        ${['Pending', 'Processing', 'Completed', 'Rework'].map(status => `
+                                            <option value="${status}" ${task.status === status ? 'selected' : ''}>
+                                                ${status}
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                <div class="text-sm text-gray-600 mt-2">
+                                    <p>Planned: ${task.plannedDate || 'Not set'}</p>
+                                    <p>Target: ${task.targetDate || 'Not set'}</p>
+                                    ${task.attachments.length ? `
+                                        <div class="mt-2">
+                                            <p class="font-semibold">Attachments:</p>
+                                            <ul class="list-disc list-inside">
+                                                ${task.attachments.map(att => `
+                                                    <li>${att}</li>
+                                                `).join('')}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(projectElement);
+            });
+        }
+
+        // Initialize
+        renderProjects();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
